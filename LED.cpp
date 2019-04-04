@@ -22,7 +22,8 @@ void LED::alternate() {
 }
 
 void LED::flash(int period) {
-  while(true) {
+  _flashing = true;
+  while(_flashing) {
     alternate();
     delay(period);  
   }

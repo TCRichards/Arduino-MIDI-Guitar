@@ -3,7 +3,7 @@
 Potentiometer::Potentiometer(int pin) {
   _pin = pin;
   pinMode(pin, INPUT);
-  _min = 50; // Default minimum value (should be changed by each unique piece)
+  _min = 20; // Default minimum value (should be changed by each unique piece)
 }
 
 int Potentiometer::getValue() {
@@ -16,4 +16,8 @@ void Potentiometer::setMin(int minimum) {
 
 int Potentiometer::getMin() {
   return _min;
+}
+
+bool Potentiometer::isOn() {
+  return getValue() > getMin();
 }

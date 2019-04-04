@@ -5,7 +5,7 @@ Button::Button(int pin) {
   _pin = pin;
   _state = false;
   _lastState = false;
-  debounceMS = 200;
+  debounceMS = 400;
 }
 
 // Returns if the button is currently pressed (no debounce)
@@ -24,10 +24,12 @@ void Button::updateButton() {
   int reading = digitalRead(_pin);
   if (reading != _lastState) { // if the reading has changed do to pressing or noise
     _startDebounce = millis();
+    _debouncing = true;
   }
  // Evaluate the state only when enough time has passed without changes
- if (millis() - _startDebounce > debounceMS) {  
+ if (_debouncing && millis() - _startDebounce > debounceMS) {  
     _state = reading;
+    _debouncing = false;
   } 
   _lastState = reading;
 }

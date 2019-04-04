@@ -3,9 +3,8 @@
 
 #include <Arduino.h>
 
-
-
 class LED {
+  
   public: 
     LED(int pin);
     bool isOn();
@@ -16,6 +15,7 @@ class LED {
 
   private:
     int _pin;
+    bool _flashing;
   
 };
 

@@ -1,38 +1,82 @@
 #include "Note.h"
-#include <MIDI.h>
-#include <midi_Defs.h>
-#include <midi_Message.h>
-#include <midi_Namespace.h>
-#include <midi_Settings.h>
+#include "Display.h"
 
-
-struct MySettings : public midi::DefaultSettings
-{
-  //By default, the Arduino MIDI Library tries to be smart by 
-  //excluding the CC byte if it doesn't change (to save bandwidth).
-  //This is a problem when starting up Serial<->MIDI software
-  //after starting up the Arduino because we miss the first CC byte.
-  //Setting UseRunningStatus to false removes this "feature."
-  //See https://github.com/projectgus/hairless-midiserial/issues/16 for details.
-  static const bool UseRunningStatus = false;
-  // Set MIDI baud rate. MIDI has a default baud rate of 31250,
-  // but we're setting our baud rate higher in order to 
-  // properly decode and read outgoing MIDI data on the computer.
-  static const long BaudRate = 115200;
-};
-
-MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial, MIDI, MySettings);
-
-Note::Note() {
+Note::Note(int serialPin) {
+  lcd = new Display(serialPin, 2); // Only need to account for the display's rx pin
   currentScale = majorScale;
   _tonic = 60;
-  _noteOn = false;
-  MIDI.begin();
+  _sounding = false;
+
 }
 
-bool Note::isSounding() {
-  return _noteOn;
+// Function that returns the midi value of the current note
+void Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* strumPot, Potentiometer* neckPot, Potentiometer* pitchBendPot) {
+  // Deal with the note played by main pot
+  int index = findInterval(mainPot->getValue(), mainPot->getMin());
+  int mainV = mainPot->getValue();
+  float power = 1/2;
+  _vibrato = constrain(map((neckPot->getValue() - neckPot->getMin()), 0, 1023, 0, 127), 0, 127);
+  _volume = constrain(map(strumPot->getValue() - strumPot->getMin(), -strumPot->getMin(), 1023, 0, 127), 0, 127);
+  _pitchBend = pitchBendPot->getValue();
+  _holding = strumPot->isOn() && mainPot->isOn();
+
+  // Determine if we're close to the note boundary
+  _crackling = findInterval(mainV + 2, mainPot->getMin()) != index || findInterval(mainV - 2, mainPot->getMin()) != index;
+
+  // Apply octave shift
+  int octaveV = octavePot->getValue();
+  int octaveShift = 0;
+  if (octaveV < octavePot->getMin()) {          // Octave pot not pressed
+    octaveShift = 0;
+  } else if (octaveV > 320) {                   // Octave pot pressed high.  Octave Up
+    octaveShift = 12;
+  } else if (octaveV < 200) {                   // Octave pot pressed low. Octave Down
+    octaveShift = -12;
+  } else {                                      // Octave pot pressed mid.  Play two octaves simultaneously
+    octaveShift = 0;
+  }
+  _noteValue = _tonic + currentScale[index] + octaveShift;
+  lcd->updateNote(_noteValue); // Make the display show the correct not
 }
+
+int Note::findInterval(int mainV, int minimum) {
+  // Tuning values for intervals
+  const unsigned int SECOND1 = 912;
+  const unsigned int THIRD1 = 796;
+  const unsigned int FOURTH1 = 702;
+  const unsigned int FIFTH1 = 630;
+  const unsigned int SIXTH1 = 562;
+  const unsigned int SEVENTH1 = 502;
+  const unsigned int EIGHTH1 = 455;
+  const unsigned int SECOND2 = 411;
+  const unsigned int THIRD2 = 373;
+  const unsigned int FOURTH2 = 334;
+  const unsigned int FIFTH2 = 301;
+  const unsigned int SIXTH2 = 269;
+  const unsigned int SEVENTH2 = 236;
+  const unsigned int EIGHTH2 = 206;
+  const unsigned int SECOND3 = 177;
+  const unsigned int THIRD3 = 150;
+  const unsigned int FOURTH3 = 115;
+  const unsigned int FIFTH3 = 83;
+  const unsigned int SIXTH3 = 46;
+  int intervals[19] = {SECOND1, THIRD1, FOURTH1, FIFTH1, SIXTH1, SEVENTH1, EIGHTH1,
+                       SECOND2, THIRD2, FOURTH2, FIFTH2, SIXTH2, SEVENTH2, EIGHTH2, SECOND3, THIRD3, FOURTH3,
+                       FIFTH3, SIXTH3};
+  if (mainV < minimum) {
+    return 0;
+  } else {
+    int index = 18; // Start indexing at the end
+    while (mainV > intervals[index]) { // Loop until we find the correct interval
+      index--;
+      if (index == -1) {
+        break;      
+      }
+    }  
+    return index + 2;
+  }
+}
+
 void Note::cycleScale() {
   if (currentScale == majorScale) {
     currentScale = minorScale;
@@ -43,12 +87,22 @@ void Note::cycleScale() {
   }
 }
 
+void Note::setSounding(bool value) {
+  _sounding = value;
+}
+
 void Note::incrementTonic() {
   _tonic += 1;
+  lcd -> shiftTonic(1);
 }
 
 void Note::decrementTonic() {
   _tonic -= 1;
+  lcd -> shiftTonic(-1);
+}
+
+void Note::setLastNote(int noteValue) {
+  _lastNote = noteValue;
 }
 
 int Note::getTonic() {
@@ -59,78 +113,26 @@ int Note::getNote() {
   return _noteValue;
 }
 
-void Note::playNote() {
-  MIDI.sendNoteOn(_noteValue, 127, 1);
-  if (_bothOctaves) {
-    MIDI.sendNoteOn(_noteValue + 12, 127, 1);
-  }
-  _noteOn = true;
+int Note::getVibrato() {
+  return _vibrato;
 }
 
-void Note::stopNote() {
-  MIDI.sendNoteOff(_noteValue, 127, 1);
-  MIDI.sendNoteOff(_noteValue + 12, 126, 1);
-  _noteOn = false;
+int Note::getLastNote() {
+  return _lastNote;
 }
 
-void Note::applyPitchBend(int value) {
-  MIDI.sendPitchBend(value, 1);
+int Note::getVolume() {
+  return _volume;
 }
 
-// Function that returns the midi value of the current note 
-// @Param: mainV of the main potentiometer
-void Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot) {
-  // Deal with the note played by main pot
-  int index = 0;
-  int mainV = mainPot->getValue();
-  if (mainV > 1000) {
-    index = 1;
-  } else if (mainV > 900) {
-    index = 2;
-  } else if (mainV > 800) {
-    index = 3;
-  } else if (mainV > 700) {
-    index = 4;
-  } else if (mainV > 600) {
-    index = 5;
-  } else if (mainV > 550) {
-    index = 6;
-  } else if (mainV > 500) {
-    index = 7;
-  } else if (mainV > 450) {
-    index = 8;
-  } else if (mainV > 400) {
-    index = 9;
-  } else if (mainV > 350) {
-    index = 10;
-  } else if (mainV > 300) {
-    index = 11;
-  } else if (mainV > 250) {
-    index = 12;
-  } else if (mainV > 200) {
-    index = 13;
-  } else if (mainV > 100) {
-    index = 14;
-  } else if (mainV > 50) {
-    index = 15;
-  } else if (mainV > mainPot->getMin()) {
-    index = 16;
-  }
-  // Apply octave shift
-  int octaveV = octavePot->getValue();
-  int octaveShift = 0;
-  if (octaveV < octavePot->getMin()) {          // Octave pot not pressed
-    octaveShift = 0;
-    _bothOctaves = false;
-  } else if (octaveV > 700) {                   // Octave pot pressed high.  Octave Up
-    _bothOctaves = false;
-    octaveShift = 12;
-  } else if (octaveV < 300) {                   // Octave pot pressed low. Octave Down
-    _bothOctaves = false;
-    octaveShift = -12;
-  } else {                                      // Octave pot pressed mid.  Play two octaves simultaneously
-    _bothOctaves = true;
-    octaveShift = 0;
-  }
-  _noteValue = _tonic + currentScale[index] + octaveShift;
+bool Note::isSounding() {
+  return _sounding;
+}
+
+bool Note::isCrackling() {
+  return _crackling;
+}
+
+bool Note::isHolding() {
+  return _holding;
 }
