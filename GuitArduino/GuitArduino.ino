@@ -1,14 +1,11 @@
-#include <frequencyToNote.h>
-#include <pitchToFrequency.h>
-#include <pitchToNote.h>
+/*
+ * Source code for the GuitArduino: an Arduino controlled MIDI instrument
+ * Author: Thomas Richards
+ * Date Modified: 4/5/2019
+ */
 
+#include <Arduino.h>
 #include <MIDI.h>
-#include <SoftwareSerial.h>
-
-#include <midi_Defs.h>
-#include <midi_Message.h>
-#include <midi_Namespace.h>
-#include <midi_Settings.h>
 
 #include "Potentiometer.h"
 #include "Button.h"
@@ -47,6 +44,13 @@ Button* downBut = new Button(12);
 Button* scaleBut = new Button(11);
 
 int serialBit = 53; 
+
+// To avoid flooding software with MIDI messages, only send on change
+byte lastPitchbend = 0;
+byte lastVolume = 0;
+byte lastJoyValue = 0;
+byte lastVibrato = 0;
+int lastBend = 0;
 
 // Requred Variables for processing
 Note* currentNote = new Note(serialBit); // Also initializes the LCD display
@@ -88,11 +92,7 @@ void loop() {
   } 
 
   currentNote->updateNote(mainPot, octavePot, strumPot, neckPot, joyX); // Update the notes based on potentiometer values
-  /*
   char chars[60];
-  sprintf(chars, "Vibrato: %d \t Voltage: %d", currentNote->getVibrato(), neckPot->getValue());
-  Serial.println(chars);
-  */
   
   if (strumPot->getValue() > strumPot->getMin() && !currentNote->isSounding()) {
     playNote();
@@ -102,11 +102,10 @@ void loop() {
     stopNote();
     playNote();
   }
-  int bend = map(joyX->getValue(), 0, 1023, 8191, -8192);
-  MIDI.sendPitchBend((int) bend, 1);
+  // Apply note effects such as pitch bend and control changes
+
   applyControlChanges();
- 
- 
+  
   }
 
 void playNote() {
@@ -121,10 +120,28 @@ void stopNote() {
 }
 
 void applyControlChanges() {
-    MIDI.sendControlChange(7, currentNote->getVolume(), 1);
-    MIDI.sendControlChange(9, currentNote->getVibrato(), 1);
+    // Only apply each control change if different than last
+    if (currentNote->getVolume() != lastVolume) {
+      lastVolume = currentNote->getVolume();
+      MIDI.sendControlChange(7, currentNote->getVolume(), 1);
+    }
+    if (currentNote->getVibrato() != lastVibrato) {
+      lastVibrato = currentNote->getVibrato();
+      MIDI.sendControlChange(9, currentNote->getVibrato(), 1);
+    }
     int yValue = map(joyY->getValue(), 0, 1023, 0, 127);
-    MIDI.sendControlChange(10, yValue, 1);
+    if (yValue != lastJoyValue) {
+      lastJoyValue = yValue;
+      MIDI.sendControlChange(10, yValue, 1);
+    }
+    int bend = map(joyX->getValue() - joyX->getMin(), 0, 1023, 16383, 0);
+    if (abs(lastBend - bend) > 20) {
+      MIDI.sendPitchBend(bend, 1);
+      lastBend = bend;
+    }
+    
+
+    
 }
 
 void cycleLEDs() {

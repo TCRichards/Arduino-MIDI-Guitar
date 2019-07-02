@@ -5,7 +5,7 @@ LED::LED(int pin) {
   _pin = pin;
 }
 
-boolean LED::isOn() {
+bool LED::isOn() {
   return digitalRead(_pin);
 }
 

@@ -27,9 +27,9 @@ void Button::updateButton() {
     _debouncing = true;
   }
  // Evaluate the state only when enough time has passed without changes
- if (_debouncing && millis() - _startDebounce > debounceMS) {  
+ if (_debouncing && millis() - _startDebounce > debounceMS) {
     _state = reading;
     _debouncing = false;
-  } 
+  }
   _lastState = reading;
 }
