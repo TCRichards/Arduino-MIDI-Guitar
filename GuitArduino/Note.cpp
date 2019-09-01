@@ -6,7 +6,6 @@ Note::Note(int serialPin) {
   currentScale = majorScale;
   _tonic = 60;
   _sounding = false;
-
 }
 
 // Function that returns the midi value of the current note
@@ -14,7 +13,6 @@ void Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentio
   // Deal with the note played by main pot
   int index = findInterval(mainPot->getValue(), mainPot->getMin());
   int mainV = mainPot->getValue();
-  float power = 1/2;
   _vibrato = constrain(map((neckPot->getValue() - neckPot->getMin()), 0, 1023, 0, 127), 0, 127);
   _volume = constrain(map(strumPot->getValue() - strumPot->getMin(), -strumPot->getMin(), 1023, 0, 127), 0, 127);
   _pitchBend = pitchBendPot->getValue();
@@ -22,21 +20,21 @@ void Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentio
 
   // Determine if we're close to the note boundary
   _crackling = findInterval(mainV + 2, mainPot->getMin()) != index || findInterval(mainV - 2, mainPot->getMin()) != index;
-
+    
+  lastOctaveShift = octaveShift;
   // Apply octave shift
   int octaveV = octavePot->getValue();
-  int octaveShift = 0;
+  
   if (octaveV < octavePot->getMin()) {          // Octave pot not pressed
     octaveShift = 0;
-  } else if (octaveV > 320) {                   // Octave pot pressed high.  Octave Up
+  } else if (octaveV > 275) {                   // Octave pot pressed high.  Octave Up
     octaveShift = 12;
-  } else if (octaveV < 200) {                   // Octave pot pressed low. Octave Down
+  } else {                   // Octave pot pressed low. Octave Down
     octaveShift = -12;
-  } else {                                      // Octave pot pressed mid.  Play two octaves simultaneously
-    octaveShift = 0;
   }
+  
   _noteValue = _tonic + currentScale[index] + octaveShift;
-  lcd->updateNote(_noteValue); // Make the display show the correct not
+  lcd->updateNote(_noteValue); // Make the display show the correct note
 }
 
 int Note::findInterval(int mainV, int minimum) {

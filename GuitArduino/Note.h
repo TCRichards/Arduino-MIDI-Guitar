@@ -33,7 +33,12 @@ class Note {
     
     void applyPitchBend(int value);
     bool octaves();
-    
+
+    int octaveShift; 
+    int lastOctaveShift;
+
+    int findInterval(int mainV, int minimum);
+
   private:
 
     Display* lcd;
@@ -43,9 +48,7 @@ class Note {
     int chromaticScale[21] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     int* currentScale;
         
-    int findInterval(int mainV, int minimum);
-
-    int _tonic;  //Lowest note (in midi value)
+    int _tonic;  // Lowest note in current range (in midi value)
     int _lastNote;
     int _noteValue; // MIDI value corresponding to note played
     int _volume; 
