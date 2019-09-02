@@ -39,25 +39,25 @@ void Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentio
 
 int Note::findInterval(int mainV, int minimum) {
   // Tuning values for intervals
-  const unsigned int SECOND1 = 912;
-  const unsigned int THIRD1 = 796;
-  const unsigned int FOURTH1 = 702;
-  const unsigned int FIFTH1 = 630;
-  const unsigned int SIXTH1 = 562;
-  const unsigned int SEVENTH1 = 502;
-  const unsigned int EIGHTH1 = 455;
-  const unsigned int SECOND2 = 411;
-  const unsigned int THIRD2 = 373;
-  const unsigned int FOURTH2 = 334;
-  const unsigned int FIFTH2 = 301;
-  const unsigned int SIXTH2 = 269;
-  const unsigned int SEVENTH2 = 236;
-  const unsigned int EIGHTH2 = 206;
-  const unsigned int SECOND3 = 177;
-  const unsigned int THIRD3 = 150;
-  const unsigned int FOURTH3 = 115;
-  const unsigned int FIFTH3 = 83;
-  const unsigned int SIXTH3 = 46;
+  const unsigned int SECOND1 = 907;
+  const unsigned int THIRD1 = 810;
+  const unsigned int FOURTH1 = 725;
+  const unsigned int FIFTH1 = 650;
+  const unsigned int SIXTH1 = 582;
+  const unsigned int SEVENTH1 = 524;
+  const unsigned int EIGHTH1 = 477;
+  const unsigned int SECOND2 = 431;
+  const unsigned int THIRD2 = 393;
+  const unsigned int FOURTH2 = 355;
+  const unsigned int FIFTH2 = 317;
+  const unsigned int SIXTH2 = 286;
+  const unsigned int SEVENTH2 = 246;
+  const unsigned int EIGHTH2 = 215;
+  const unsigned int SECOND3 = 189;
+  const unsigned int THIRD3 = 157;
+  const unsigned int FOURTH3 = 121;
+  const unsigned int FIFTH3 = 88;
+  const unsigned int SIXTH3 = 47;
   int intervals[19] = {SECOND1, THIRD1, FOURTH1, FIFTH1, SIXTH1, SEVENTH1, EIGHTH1,
                        SECOND2, THIRD2, FOURTH2, FIFTH2, SIXTH2, SEVENTH2, EIGHTH2, SECOND3, THIRD3, FOURTH3,
                        FIFTH3, SIXTH3};
