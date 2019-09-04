@@ -39,18 +39,18 @@ void Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentio
 
 int Note::findInterval(int mainV, int minimum) {
   // Tuning values for intervals
-  const unsigned int SECOND1 = 907;
-  const unsigned int THIRD1 = 810;
-  const unsigned int FOURTH1 = 725;
-  const unsigned int FIFTH1 = 650;
-  const unsigned int SIXTH1 = 582;
-  const unsigned int SEVENTH1 = 524;
-  const unsigned int EIGHTH1 = 477;
-  const unsigned int SECOND2 = 431;
-  const unsigned int THIRD2 = 393;
-  const unsigned int FOURTH2 = 355;
-  const unsigned int FIFTH2 = 317;
-  const unsigned int SIXTH2 = 286;
+  const unsigned int SECOND1 = 930;
+  const unsigned int THIRD1 = 805;
+  const unsigned int FOURTH1 = 711;
+  const unsigned int FIFTH1 = 636;
+  const unsigned int SIXTH1 = 571;
+  const unsigned int SEVENTH1 = 516;
+  const unsigned int EIGHTH1 = 463;
+  const unsigned int SECOND2 = 416;
+  const unsigned int THIRD2 = 375;
+  const unsigned int FOURTH2 = 341;
+  const unsigned int FIFTH2 = 308;
+  const unsigned int SIXTH2 = 277;
   const unsigned int SEVENTH2 = 246;
   const unsigned int EIGHTH2 = 215;
   const unsigned int SECOND3 = 189;

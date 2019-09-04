@@ -75,16 +75,6 @@ void setup() {
 }
 
 void loop() {
-//    // Determine whether joystick adds pitch bend or distortion based on relative deltas in x and y directions
-//  int yValue = map(joyY->getValue(), 0, 1023, 0, 127);
-//  int midMIDIVal = map(joyY->getMin(), 0, 1023, 0, 127);  // Joystick's default value in Y direction scaled to 0 - 127
-//  int deltaY = midMIDIVal - yValue; // Displacement in Y direction
-//  int xValue = map(joyX->getValue(), 0, 1023, 0, 127);
-//  int midXValue = map(joyX->getMin(), 0, 1023, 0, 127);
-//  int deltaX = midXValue - xValue;
-//
-//  unsigned int bend = map(deltaX, midXValue - 127, midXValue, 0, 16383);
-//  Serial.println(bend);
   // Update the buttons
   upBut->updateButton();
   downBut->updateButton();
