@@ -12,17 +12,20 @@ class Display {
   
     Display(int rx, int tx);
     void shiftTonic(int numHalfSteps);
-    void updateNote(int interval);
-  
+    void updateNote(int midiValue);
+    void setTonic(int tonicValue);
+ 
   private:
     void backspace();
-    void moveCursor(int horiz, boolean firstLine);
+    void moveCursor(char horiz, boolean firstLine);
 
     String noteNames[12] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+    String getTonicName();
+
     int _curTonic;
     int _curInterval; // Number of half steps from C to the current tonic note
     int _curNote; 
-    int _curOctave; // Displays which piano octave the note lies in
+    int _curOctave;   // Displays which piano octave the note lies in
    
     SoftwareSerial lcd;
 };

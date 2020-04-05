@@ -10,7 +10,7 @@ class Note {
   public:
   
     Note(int lcdPin);
-    void updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* strumPot, Potentiometer* neckPot, Potentiometer* pitchBendPot);
+    int updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* strumPot, Potentiometer* neckPot, Potentiometer* pitchBendPot);
 
     int getTonic();
     int getNote();
@@ -59,7 +59,13 @@ class Note {
     bool _holding;
     bool _sounding;
     bool _crackling;
- 
+
+    int mapPitchBend(Potentiometer* joyX);
+    int mapNeckPressure(Potentiometer* neckPot);
+    int mapStrumPressure(Potentiometer* strumPot);
+
+    void updateLCDTonic();
+
 };
 
 

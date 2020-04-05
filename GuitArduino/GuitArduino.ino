@@ -25,26 +25,29 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial, MIDI, MySettings);
 // Initialize Hardware Components
 
 // Potentiometers
-Potentiometer* strumPot = new Potentiometer(A8);
-Potentiometer* mainPot = new Potentiometer(A1);
-Potentiometer* neckPot = new Potentiometer(A3);
-Potentiometer* octavePot = new Potentiometer(A15);
+Potentiometer* strumPot = new Potentiometer(A10);
+Potentiometer* mainPot = new Potentiometer(A2);
+Potentiometer* octavePot = new Potentiometer(A3);
+Potentiometer* neckPot = new Potentiometer(A11);
+
 Potentiometer* joyY = new Potentiometer(A6);
-Potentiometer* portKnob = new Potentiometer(A11);
 Potentiometer* joyX = new Potentiometer(A7);
+Potentiometer* knob1 = new Potentiometer(A13);
+Potentiometer* knob2 = new Potentiometer(A14);
+Potentiometer* knob3 = new Potentiometer(A15);
 
 // LEDs
-LED* led1 = new LED(4); // On if Major
-LED* led2 = new LED(3); // On if Minor
+LED* led1 = new LED(3); // On if Major
+LED* led2 = new LED(4); // On if Minor
 LED* led3 = new LED(5); // On if Chromatic
 
 // Buttons
-Button* joyBut = new Button(8);
-Button* upBut = new Button(13);
-Button* downBut = new Button(12);
-Button* scaleBut = new Button(11);
+Button* upBut = new Button(8);
+Button* downBut = new Button(7);
+Button* scaleBut = new Button(6);
+Button* joyBut = new Button(9);
 
-int serialBit = 53;
+int lcdPin = 32;
 
 // To avoid flooding software with MIDI messages, only send on change
 byte lastPitchbend = 0;
@@ -55,35 +58,40 @@ byte lastVibrato = 0;
 int lastBend = 0;
 
 // Requred Variables for processing
-Note* currentNote = new Note(serialBit); // Also initializes the LCD display
+Note* currentNote = new Note(lcdPin); // Also initializes the LCD display
 
 boolean bothOctaves;
 
 void setup() {
+  // Make additional ground pin
+  digitalWrite(22, HIGH);
+  // Write the joystick input high -- apparently this is necessary
+  digitalWrite(9, HIGH);
+
   //MIDI.begin();
   Serial.begin(9600);
   led1->turnOn();
 
+
   // Zero the potentiometers whose exact values don't matter
-  strumPot->setMin(60); // No false positives (This one is particularly important)!
-  neckPot->setMin(30);
-  octavePot->setMin(70);
-  mainPot->setMin(60); // Currently having some floating ground issues
+  strumPot->setMin(30); // No false positives! (This one is particularly important)
+  octavePot->setMin(30);
+  mainPot->setMin(2);
 
   joyX->setMin(joyX->getValue());
-  joyY->setMin(joyY->getValue(  ));
+  joyY->setMin(joyY->getValue());
 }
 
 void loop() {
+
   // Update the buttons
   upBut->updateButton();
   downBut->updateButton();
   scaleBut->updateButton();
   joyBut->updateButton();
-
   // Has a button been pressed?
   if (upBut->wasPressed()) {
-    currentNote->incrementTonic();
+    currentNote->incrementTonic();  
   }
   if (downBut->wasPressed()) {
     currentNote->decrementTonic();
@@ -92,8 +100,11 @@ void loop() {
     currentNote->cycleScale();
     cycleLEDs();
   }
+  if (joyBut->wasPressed()) {
+  }
 
   currentNote->updateNote(mainPot, octavePot, strumPot, neckPot, joyX); // Update the notes based on potentiometer values
+//  Serial.println(currentNote->getPitchBend());
   bool tonicOctave = currentNote->isSounding() && currentNote->findInterval(mainPot->getValue(), mainPot->getMin()) == 0 && currentNote->octaveShift != currentNote->lastOctaveShift;
   if (strumPot->getValue() > strumPot->getMin() && !currentNote->isSounding()) {
     playNote();
@@ -140,13 +151,13 @@ void applyControlChanges() {
   int deltaX = midXValue - xValue;
 
   if (abs(deltaX) > abs(deltaY)) { // Send Pitch Bend
-    int bend = map(deltaX, midXValue, -midXValue, -8192, 8192);
-    if (abs(lastBend - bend) > 20) {
+    int bend = currentNote->getPitchBend() - 8192;
+    if (abs(lastBend - bend) > 4) {
       MIDI.sendPitchBend(bend, 1);
       lastBend = bend;
     }
   } else {  // Send distortion instead
-    if (lastBend != 0) { // Make sure pitch bend is set to 0
+    if (lastBend != 8192) { // Make sure pitch bend is set to 0
       MIDI.sendPitchBend(0, 1);
       lastBend = 0;
     }
@@ -163,13 +174,11 @@ void applyControlChanges() {
   }
 
   // Send Portamento Data
-  int portScaled = constrain(map(portKnob->getValue(), 0, 1023, 0, 127), 0, 127);
+  int portScaled = constrain(map(knob1->getValue(), 0, 1023, 0, 127), 0, 127);
   if (abs(portScaled - lastPortamento) > 5) {
     MIDI.sendControlChange(12, portScaled, 1);
     lastPortamento = portScaled;
   }
-
-
 }
 
 void cycleLEDs() {
