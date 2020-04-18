@@ -11,7 +11,11 @@ class Button {
   bool isOn();
   void reset();
   bool wasPressed();
+  bool stateChanged();
   void updateButton();
+
+  bool wasPressedAndDown();
+  bool wasLifted();
     
  private:
   
@@ -20,7 +24,11 @@ class Button {
   bool _lastState;
   uint16_t _startDebounce;
   bool _debouncing;
+  bool _newlyPressed;
+  bool _newlyLifted;
   unsigned long debounceMS;
+  
+
 };
 
 #endif

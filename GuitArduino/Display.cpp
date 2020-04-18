@@ -9,9 +9,6 @@ Display::Display(int rx, int tx): lcd(rx, tx) {
   lcd.write(12);    // Clears the current display
   lcd.write(22);  // Makes cursor invisible
   lcd.print("Tonic: C");
-  _curInterval = 0;
-  _curOctave = 4; // Octave containing middle C
-  _curNote = 0;
 }
 
 // Cursor should begin at end of line 2
@@ -23,9 +20,9 @@ void Display::updateNote(int midiValue) {
     return;
   }
 
-  moveCursor(9, true);
+  moveCursor(12, true);
   int i = 0;
-  while (i < 3) { // Delete the last note (may be 1 or 2 characters depending on note name)
+  while (i < 6) { // Delete the last note (may be 1 or 2 characters depending on note name)
     backspace();
     lcd.print(' ');
     backspace();
@@ -33,6 +30,8 @@ void Display::updateNote(int midiValue) {
   }
   _curNote = midiValue; // The distance from C is the tonic's distance plus the interval's distance from tonic
   lcd.print(noteNames[midiValue % 12]); // Print the new note
+  moveCursor(10, true);
+  lcd.print((int) midiValue / 12);    // Prints the octave
 }
 
 void Display::backspace() {

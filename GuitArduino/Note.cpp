@@ -4,7 +4,7 @@
 Note::Note(int serialPin) {
   lcd = new Display(serialPin, 2); // Only need to account for the display's rx pin
   currentScale = majorScale;
-  _tonic = 60;
+  _tonic = 48;
   _sounding = false;
   updateLCDTonic();
 }
@@ -88,7 +88,6 @@ int Note::mapPitchBend(Potentiometer* joyX) {
   float D = -41.4;
   float E = 1.606E4;
   float flippedResult = constrain(A*pow(x, 4) + B*pow(x, 3) + C*pow(x, 2) + D*x + E, 0, 16383);
-//  return map(flippedResult, 0, 16383, 16383, 0);
   return flippedResult;
 }
 
@@ -117,7 +116,7 @@ int Note::mapStrumPressure(Potentiometer* strumPot) {
   float C = 1.46E-3;
   float D = 5.5116E-2;
   float E = 1.209E-1;
-  return constrain(A*pow(x, 4) + B*pow(x, 3) + C*pow(x, 2) + D*x + E, 0, 127);
+  return constrain((A*pow(x, 4) + B*pow(x, 3) + C*pow(x, 2) + D*x + E) / 2.5, 0, 127);
 }
 
 
@@ -126,9 +125,11 @@ void Note::cycleScale() {
     currentScale = minorScale;
   } else if (currentScale == minorScale) {
     currentScale = chromaticScale;
-  } else if (currentScale == chromaticScale) {
+  } else if (currentScale == bluesScale) {
     currentScale = majorScale;
-  }
+  } else if (currentScale == chromaticScale) {
+    currentScale = bluesScale;
+  } 
 }
 
 void Note::setSounding(bool value) {

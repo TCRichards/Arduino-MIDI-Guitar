@@ -23,9 +23,7 @@ class Display {
     String getTonicName();
 
     int _curTonic;
-    int _curInterval; // Number of half steps from C to the current tonic note
     int _curNote; 
-    int _curOctave;   // Displays which piano octave the note lies in
    
     SoftwareSerial lcd;
 };

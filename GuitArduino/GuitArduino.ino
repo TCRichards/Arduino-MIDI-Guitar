@@ -56,6 +56,7 @@ byte lastPortamento = 0;
 byte lastJoyValue = 0;
 byte lastVibrato = 0;
 int lastBend = 0;
+bool joyButLive = false;
 
 // Requred Variables for processing
 Note* currentNote = new Note(lcdPin); // Also initializes the LCD display
@@ -83,12 +84,12 @@ void setup() {
 }
 
 void loop() {
-
   // Update the buttons
   upBut->updateButton();
   downBut->updateButton();
   scaleBut->updateButton();
   joyBut->updateButton();
+
   // Has a button been pressed?
   if (upBut->wasPressed()) {
     currentNote->incrementTonic();  
@@ -100,11 +101,16 @@ void loop() {
     currentNote->cycleScale();
     cycleLEDs();
   }
-  if (joyBut->wasPressed()) {
-  }
 
+  if (joyBut->wasLifted()) {
+    MIDI.sendControlChange(22, 0, 1);
+  }
+  
+  if (joyBut->wasPressedAndDown()) {
+    MIDI.sendControlChange(22, 127, 1);
+    joyButLive = true;
+  }
   currentNote->updateNote(mainPot, octavePot, strumPot, neckPot, joyX); // Update the notes based on potentiometer values
-//  Serial.println(currentNote->getPitchBend());
   bool tonicOctave = currentNote->isSounding() && currentNote->findInterval(mainPot->getValue(), mainPot->getMin()) == 0 && currentNote->octaveShift != currentNote->lastOctaveShift;
   if (strumPot->getValue() > strumPot->getMin() && !currentNote->isSounding()) {
     playNote();
@@ -150,17 +156,12 @@ void applyControlChanges() {
   int midXValue = map(joyX->getMin(), 0, 1023, 0, 127);
   int deltaX = midXValue - xValue;
 
-  if (abs(deltaX) > abs(deltaY)) { // Send Pitch Bend
     int bend = currentNote->getPitchBend() - 8192;
-    if (abs(lastBend - bend) > 4) {
+    if (abs(lastBend - bend) > 2  ) {
       MIDI.sendPitchBend(bend, 1);
       lastBend = bend;
-    }
-  } else {  // Send distortion instead
-    if (lastBend != 8192) { // Make sure pitch bend is set to 0
-      MIDI.sendPitchBend(0, 1);
-      lastBend = 0;
-    }
+    
+    
     if (yValue != lastJoyValue) { // Joystick value has changed
       if (deltaY < 0) {  // Moved joystick up (to lower Voltage)
         int downVal = constrain(map(deltaY, 0, midMIDIVal - 127, 0, 127), 0, 127);  // Scaled to MIDI value (0 - 127)
@@ -182,14 +183,18 @@ void applyControlChanges() {
 }
 
 void cycleLEDs() {
-  if (led1->isOn()) {
+  if (led1->isOn() && led2->isOn() && led3->isOn()) { // Chromatic -> Major
+    led2->turnOff();
+    led3->turnOff();
+  } else if (led1->isOn()) {  // Major -> Minor
     led1->turnOff();
     led2->turnOn();
-  } else if (led2->isOn()) {
+  } else if (led2->isOn()) {  // Minor -> Blues
     led2->turnOff();
     led3->turnOn();
-  } else {
-    led3->turnOff();
+  } else {                    // Blues -> Chromatic
     led1->turnOn();
-  }
+    led2->turnOn();
+    led3->turnOn();
+  } 
 }
