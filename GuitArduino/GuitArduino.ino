@@ -25,10 +25,14 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial, MIDI, MySettings);
 // Initialize Hardware Components
 
 // Potentiometers
-Potentiometer* strumPot = new Potentiometer(A10);
-Potentiometer* mainPot = new Potentiometer(A2);
-Potentiometer* octavePot = new Potentiometer(A3);
+Potentiometer* midStrumPot = new Potentiometer(A0);
+Potentiometer* sharpStrumPot = new Potentiometer(A2);
+Potentiometer* flatStrumPot = new Potentiometer(A1);
+
+Potentiometer* mainPot = new Potentiometer(A3);
+Potentiometer* octavePot = new Potentiometer(A4);
 Potentiometer* neckPot = new Potentiometer(A11);
+Potentiometer* circlePot = new Potentiometer(A8);
 
 Potentiometer* joyY = new Potentiometer(A6);
 Potentiometer* joyX = new Potentiometer(A7);
@@ -54,6 +58,8 @@ byte lastPitchbend = 0;
 byte lastVolume = 0;
 byte lastPortamento = 0;
 byte lastJoyValue = 0;
+byte lastKnob2 = 0;
+byte lastKnob3 = 0;
 byte lastVibrato = 0;
 int lastBend = 0;
 bool joyButLive = false;
@@ -75,9 +81,11 @@ void setup() {
 
 
   // Zero the potentiometers whose exact values don't matter
-  strumPot->setMin(30); // No false positives! (This one is particularly important)
+  midStrumPot->setMin(50); // No false positives! (This one is particularly important)
+  sharpStrumPot->setMin(30);
+  flatStrumPot->setMin(30);
   octavePot->setMin(30);
-  mainPot->setMin(2);
+  mainPot->setMin(20);
 
   joyX->setMin(joyX->getValue());
   joyY->setMin(joyY->getValue());
@@ -101,7 +109,6 @@ void loop() {
     currentNote->cycleScale();
     cycleLEDs();
   }
-
   if (joyBut->wasLifted()) {
     MIDI.sendControlChange(22, 0, 1);
   }
@@ -110,14 +117,14 @@ void loop() {
     MIDI.sendControlChange(22, 127, 1);
     joyButLive = true;
   }
-  currentNote->updateNote(mainPot, octavePot, strumPot, neckPot, joyX); // Update the notes based on potentiometer values
+  currentNote->updateNote(mainPot, octavePot, midStrumPot, sharpStrumPot, flatStrumPot, neckPot, joyX); // Update the notes based on potentiometer values
   bool tonicOctave = currentNote->isSounding() && currentNote->findInterval(mainPot->getValue(), mainPot->getMin()) == 0 && currentNote->octaveShift != currentNote->lastOctaveShift;
-  if (strumPot->getValue() > strumPot->getMin() && !currentNote->isSounding()) {
+  if (!currentNote->isSounding() && currentNote->isStrummed()) {
     playNote();
   }
-  else if (currentNote->isSounding() && strumPot->getValue() < strumPot->getMin()) { // Don't stop the note if the neck has any pressure
+  else if (currentNote->isSounding() && !currentNote->isStrummed()) { // Don't stop the note if the neck has any pressure
     stopNote();
-  } else if ((currentNote->isHolding() && currentNote->getNote() != currentNote->getLastNote() && !currentNote->isCrackling()) || tonicOctave) {
+  } else if ((currentNote->getStrummedPot() != currentNote->getLastStrummedPot()) || (currentNote->isSounding() && !currentNote->isHolding() && (currentNote->getNote() != currentNote->getLastNote()) && !currentNote->isCrackling()) || tonicOctave) {
     stopNote();
     playNote();
   }
@@ -180,6 +187,21 @@ void applyControlChanges() {
     MIDI.sendControlChange(12, portScaled, 1);
     lastPortamento = portScaled;
   }
+  // Send Data from other knobs
+  // Knob 2 has power and ground flipped (woops) -- flip midi value
+  int knob2Scaled = constrain(map(knob2->getValue(), 0, 1023, 127, 0), 0, 127);
+  if (abs(knob2Scaled - lastKnob2) > 5) {
+    MIDI.sendControlChange(13, knob2Scaled, 1);
+    lastKnob2 = knob2Scaled;
+  }
+  // knob3 is out of commission at the moment
+//  int knob3Scaled = constrain(map(knob3->getValue(), 0, 1023, 0, 127), 0, 127);
+//  if (abs(knob3Scaled - lastKnob3) > 5) {
+//    MIDI.sendControlChange(14, knob3Scaled, 1);
+//    lastKnob3 = knob3Scaled;
+//  }
+  
+  
 }
 
 void cycleLEDs() {

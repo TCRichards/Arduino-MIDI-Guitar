@@ -1,6 +1,5 @@
-#ifndef Note_h
-#define Note_h
-
+#pragma once
+#include <Queue.h>
 #include "Arduino.h"
 #include "Potentiometer.h"
 #include "Display.h"
@@ -10,7 +9,8 @@ class Note {
   public:
   
     Note(int lcdPin);
-    int updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* strumPot, Potentiometer* neckPot, Potentiometer* pitchBendPot);
+    int updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* midStrumPot, Potentiometer* sharpStrumPot, Potentiometer* flatStrumPot, 
+      Potentiometer* neckPot, Potentiometer* pitchBendPot);
 
     int getTonic();
     int getNote();
@@ -23,7 +23,7 @@ class Note {
     bool isSounding();
     bool isHolding();
     bool isCrackling();
-
+    bool isStrummed();
     void setSounding(bool value);
     void setLastNote(int noteValue);
 
@@ -33,6 +33,9 @@ class Note {
     
     void applyPitchBend(int value);
     bool octaves();
+
+    Potentiometer* getStrummedPot();
+    Potentiometer* getLastStrummedPot();
 
     int octaveShift; 
     int lastOctaveShift;
@@ -60,6 +63,15 @@ class Note {
     bool _holding;
     bool _sounding;
     bool _crackling;
+    bool _strummed;
+
+
+    Potentiometer* _strummedPot;
+    Potentiometer* _lastStrummedPot;
+    
+    DataQueue<int> strumValQueue;
+
+    int getStrumAverage();
 
     int mapPitchBend(Potentiometer* joyX);
     int mapNeckPressure(Potentiometer* neckPot);
@@ -68,6 +80,3 @@ class Note {
     void updateLCDTonic();
 
 };
-
-
-#endif

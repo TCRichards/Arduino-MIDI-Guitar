@@ -14,7 +14,7 @@ def fetchData(sheetName):
     return sensorOutput, midiAssignment
 
 def fitPoly(sensorValues, midiValues):
-    return np.polyfit(sensorValues, midiValues, deg=4)
+    return np.polyfit(sensorValues, midiValues, deg=5)
 
 
 def compareFitToData(fitParams, sensorValues, midiValues):
@@ -32,7 +32,7 @@ def compareFitToData(fitParams, sensorValues, midiValues):
 
 
 if __name__ == '__main__':
-    sensorValues, midiValues = fetchData('Pitchbend')
+    sensorValues, midiValues = fetchData('Strum')
     fitParams = fitPoly(sensorValues, midiValues)
     compareFitToData(fitParams, sensorValues, midiValues)
     print('Params = {}'.format(fitParams))

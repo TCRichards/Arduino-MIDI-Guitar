@@ -1,3 +1,4 @@
+#include <Queue.h>
 #include "Note.h"
 #include "Display.h"
 
@@ -7,21 +8,46 @@ Note::Note(int serialPin) {
   _tonic = 48;
   _sounding = false;
   updateLCDTonic();
+  strumValQueue = DataQueue<int>(1000);
 }
 
 
 // Function that returns the midi value of the current note
-int Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* strumPot, Potentiometer* neckPot, Potentiometer* pitchBendPot) {
+int Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiometer* midStrumPot, Potentiometer* sharpStrumPot, Potentiometer* flatStrumPot, Potentiometer* neckPot, Potentiometer* pitchBendPot) {
   // Deal with the note played by main pot
+  // Is the note being strummed?
+  _strummed = midStrumPot->isOn() || sharpStrumPot->isOn(); // || flatStrumPot->isOn();
+  _lastStrummedPot = _strummedPot;
+  
+  // Add an offset if played sharp or flat
+  int accentOffset;
+  // Allow whichever pot was strummed MOST RECENTLY to count as the _strummedPot
+  // Ensure by giving priority to the pot if it's not the same as the last one
+  if (midStrumPot->isOn() && _lastStrummedPot != midStrumPot) {
+    accentOffset = 0;
+    _strummedPot = midStrumPot;
+  } else if (sharpStrumPot->isOn() && _lastStrummedPot != sharpStrumPot) {
+    accentOffset = 1;
+    _strummedPot = sharpStrumPot;
+  } 
+//  The flat strumPot is not connected currently.
+//  else if (flatStrumPot->isOn() && _lastStrummedPot != flatStrumPot) {
+//    accentOffset = -1;
+//    _strummedPot = flatStrummedPot;
+//  }
   int mainV = mainPot->getValue();
   int index = findInterval(mainV, mainPot->getMin());
   _vibrato = mapNeckPressure(neckPot);
-  _volume = mapStrumPressure(strumPot);
+
+  _volume = mapStrumPressure(_strummedPot);
   _pitchBend = mapPitchBend(pitchBendPot);
-  _holding = strumPot->isOn() && mainPot->isOn();
+  // TODO: Stop jittering from holding
+  
+  _holding = _strummed && !mainPot->isOn();
 
   // Determine if we're close to the note boundary
-  _crackling = findInterval(mainV + 2, mainPot->getMin()) != index || findInterval(mainV - 2, mainPot->getMin()) != index;
+  int cracklingRange = 5;
+  _crackling = findInterval(mainV + cracklingRange, mainPot->getMin()) != index || findInterval(mainV - cracklingRange, mainPot->getMin()) != index;
   lastOctaveShift = octaveShift;
   // Apply octave shift
   int octaveV = octavePot->getValue();
@@ -33,7 +59,7 @@ int Note::updateNote(Potentiometer* mainPot, Potentiometer* octavePot, Potentiom
   } else {
     octaveShift = 0;
   }
-  _noteValue = _tonic + currentScale[index] + octaveShift;  
+  _noteValue = _tonic + currentScale[index] + octaveShift + accentOffset;  
 
   lcd->updateNote(_noteValue); // Make the display show the correct note
   return _volume;
@@ -94,29 +120,49 @@ int Note::mapPitchBend(Potentiometer* joyX) {
 
 int Note::mapNeckPressure(Potentiometer* neckPot) {
   float x = neckPot->getValue();
+  int midMIDI = 63;
   if (x < neckPot->getMin()) {
-    return 0;
+    return midMIDI;
   }
   float A = 1.13e-9;
   float B = -2.04E-6;
   float C = 1.11E-3;
   float D = -5.408E-2;
   float E = -5.053E-1;
-  return constrain(A*pow(x, 4) + B*pow(x, 3) + C*pow(x, 2) + D*x + E, 0, 127);
+  // Helm's LFO is 0 at the midpoint and goes to maxima at 0 and 127, so map between 63 and 127
+  return constrain(A*pow(x, 4) + B*pow(x, 3) + C*pow(x, 2) + D*x + E, midMIDI, 127);
+ 
 }
 
 
+int Note::getStrumAverage() {
+    DataQueue<int> temp = DataQueue<int>(strumValQueue.max_queue_size());
+    int sum = 0;
+    for (int i = 0; i < strumValQueue.item_count(); i++) {
+      int val = strumValQueue.dequeue();
+      temp.enqueue(val);
+      sum += val;
+    }
+    strumValQueue = temp;
+    return sum / strumValQueue.item_count();
+}
+
 int Note::mapStrumPressure(Potentiometer* strumPot) {
-  float x = strumPot->getValue();
-  if (x < strumPot->getMin()) {
+  // Smooth the values from the strum pot by averaging the queue
+  float readVal = strumPot->getValue();
+  if (readVal < strumPot->getMin()) {
     return 0;
   }
-  float A = 1.04e-8;
-  float B = -7.33E-6;
-  float C = 1.46E-3;
-  float D = 5.5116E-2;
-  float E = 1.209E-1;
-  return constrain((A*pow(x, 4) + B*pow(x, 3) + C*pow(x, 2) + D*x + E) / 2.5, 0, 127);
+  strumValQueue.enqueue(readVal);
+  int x = getStrumAverage();
+  
+  float A = -3.079E-12;
+  float B = 7.088E-9;
+  float C = -5.084E-6;
+  float D = 1.257E-3;
+  float E = 1.208E-1;
+  float F = -2.019E-1;
+  return constrain((A*pow(x, 5) + B*pow(x, 4) + C*pow(x, 3) + D*pow(x,2) + E*x + F) / 3.4, 0, 127);
 }
 
 
@@ -162,6 +208,14 @@ int Note::getNote() {
   return _noteValue;
 }
 
+Potentiometer* Note::getStrummedPot() {
+  return _strummedPot;
+}
+
+Potentiometer* Note::getLastStrummedPot() {
+  return _lastStrummedPot;
+}
+
 int Note::getVibrato() {
   return _vibrato;
 }
@@ -182,6 +236,9 @@ bool Note::isCrackling() {
   return _crackling;
 }
 
+bool Note::isStrummed() {
+  return _strummed;
+}
 bool Note::isHolding() {
   return _holding;
 }
